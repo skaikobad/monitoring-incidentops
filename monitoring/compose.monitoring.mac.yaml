@@ -1,0 +1,138 @@
+name: incident-observability
+
+services:
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    restart: unless-stopped
+
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+    ports:
+      - "127.0.0.1:9090:9090"
+
+    networks:
+      - monitoring
+      - observability
+
+
+  loki:
+    image: grafana/loki:3.7.6
+    restart: unless-stopped
+
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+
+    ports:
+      - "127.0.0.1:3100:3100"
+
+    networks:
+      - monitoring
+
+
+  alloy:
+    image: grafana/alloy:v1.18.0
+    restart: unless-stopped
+
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+
+    ports:
+      - "127.0.0.1:12345:12345"
+
+    depends_on:
+      - loki
+
+    networks:
+      - monitoring
+
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    restart: unless-stopped
+
+    command:
+      - --path.rootfs=/host
+
+    volumes:
+      - /:/host:ro
+
+    networks:
+      - monitoring
+
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    restart: unless-stopped
+
+    privileged: true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+
+    networks:
+      - monitoring
+
+
+  grafana:
+    image: grafana/grafana:13.2.0
+    restart: unless-stopped
+
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env.monitoring}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - prometheus
+      - loki
+
+    networks:
+      - monitoring
+
+
+volumes:
+  prometheus_data:
+  loki_data:
+  alloy_data:
+  grafana_data:
+
+
+networks:
+
+  monitoring:
+    driver: bridge
+
+  observability:
+    external: true
+    name: incident-observability
