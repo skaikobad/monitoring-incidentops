@@ -3,14 +3,14 @@ name: incident-observability
 services:
   prometheus:
     image: prom/prometheus:v3.14.0
-    restart: unless-stopped
+    restart: unless-stopped # when the container stops or crashes, it will restart automatically unless it was explicitly stopped by the user. This is useful for keeping the monitoring system running even if it encounters errors.
     command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=7d
+      - --config.file=/etc/prometheus/prometheus.yml  # Specifies the path to the Prometheus configuration file inside the container. Prometheus will read this file to determine which targets to scrape metrics from and how to evaluate rules.
+      - --storage.tsdb.path=/prometheus # Specifies the directory where Prometheus will store its time series database (TSDB) data. This is where all the scraped metrics and time series data will be persisted. The directory is mounted as a volume from the host machine, allowing the data to be stored persistently even if the container is restarted or removed.
+      - --storage.tsdb.retention.time=7d  # Sets the retention period for the time series data stored in Prometheus. In this case, data older than 7 days will be automatically deleted to free up storage space. This helps manage disk usage and ensures that Prometheus doesn't consume excessive storage over time.
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro # Mounts the Prometheus configuration file from the host machine to the container. The file is mounted as read-only (ro) to ensure that Prometheus cannot modify the configuration file while it is running.
+      - prometheus_data:/prometheus # Mounts a named volume from the host machine to the container. This volume is used to persist Prometheus' time series database (TSDB) data, allowing it to survive container restarts and removals. The volume is mounted at the /prometheus directory inside the container.
     ports:
       - "127.0.0.1:9090:9090"
     networks:
@@ -20,10 +20,11 @@ services:
   loki:
     image: grafana/loki:3.7.6
     restart: unless-stopped
-    command: -config.file=/etc/loki/loki-config.yml
+    command: 
+      -config.file=/etc/loki/loki-config.yml  # Specifies the path to the Loki configuration file inside the container. Loki will read this file to determine how to handle log entries and where to store them.
     volumes:
-      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
-      - loki_data:/loki
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro # Mounts the Loki configuration file from the host machine to the container. The file is mounted as read-only (ro) to ensure that Loki cannot modify the configuration file while it is running.
+      - loki_data:/loki # Mounts a named volume from the host machine to the container. This volume is used to persist Loki's log data, allowing it to survive container restarts and removals. The volume is mounted at the /loki directory inside the container.
     ports:
       - "127.0.0.1:3100:3100"
     networks:
@@ -33,14 +34,14 @@ services:
     image: grafana/alloy:v1.18.0
     restart: unless-stopped
     command:
-      - run
+      - run # Starts the Alloy service in run mode, which is the default mode for running the application. This command is passed to the Alloy container as an argument.
       - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy/data
-      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data  # Specifies the directory where Alloy will store its data. This is where all the logs and other data managed by Alloy will be persisted. The directory is mounted as a volume from the host machine, allowing the data to be stored persistently even if the container is restarted or removed. The directory is mounted at the /var/lib/alloy/data path inside the container.
+      - /etc/alloy/config.alloy # Specifies the path to the Alloy configuration file inside the container. Alloy will read this file to determine how to handle log entries and where to store them. The configuration file is mounted as a volume from the host machine, allowing it to be updated or modified without having to rebuild the container.
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - alloy_data:/var/lib/alloy/data
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro # Mounts the Alloy configuration file from the host machine to the container. The file is mounted at the /etc/alloy/config.alloy path inside the container and is read-only, meaning that it cannot be modified by the container.
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Mounts the Docker socket from the host machine to the container. This allows Alloy to communicate with the Docker daemon on the host, enabling it to gather logs and metrics from other containers running on the same host. The socket is mounted as read-only (ro) to ensure that Alloy cannot modify or interfere with the Docker daemon.
+      - alloy_data:/var/lib/alloy/data # Mounts a named volume from the host machine to the container. This volume is used to persist Alloy's data, allowing it to survive container restarts and removals. The volume is mounted at the /var/lib/alloy/data directory inside the container.
     ports:
       - "127.0.0.1:12345:12345"
     depends_on:
@@ -52,9 +53,9 @@ services:
     image: quay.io/prometheus/node-exporter:v1.12.1
     restart: unless-stopped
     command:
-      - --path.rootfs=/host
+      - --path.rootfs=/host # Sets the root filesystem path for node-exporter to /host, which is a mounted directory from the host. This allows node-exporter to access system-level metrics and information about the host.
     volumes:
-      - /:/host:ro,rslave
+      - /:/host:ro,rslave  # Mounts the host's root filesystem as read-only to the container. This allows node-exporter to access system-level metrics and information about the host.
     networks:
       - monitoring
 
@@ -62,14 +63,14 @@ services:
     image: ghcr.io/google/cadvisor:v0.60.5
     restart: unless-stopped
     privileged: true
-    devices:
-      - /dev/kmsg:/dev/kmsg
+    devices: # Passes a specific device file from the host into the container. /dev/kmsg is the kernel message buffer (like dmesg logs) — cAdvisor reads this to catch kernel-level events/errors.
+      - /dev/kmsg:/dev/kmsg # This is required to get kernel-level events/errors
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
-      - /dev/disk:/dev/disk:ro
+      - /:/rootfs:ro  # Mount the host root filesystem as read-only to the container. lets cAdvisor inspect overall system info
+      - /var/run:/var/run:ro  # Mounts the host's /var/run directory as read-only to the container. This allows cAdvisor to access runtime information about running processes and services on the host.
+      - /sys:/sys:ro  # Mounts the host's /sys directory as read-only to the container. This provides cAdvisor with access to system and hardware information, such as CPU, memory, and device stats.
+      - /var/lib/docker:/var/lib/docker:ro # Mounts the host's Docker data directory as read-only to the container. This allows cAdvisor to gather metrics and information about Docker containers running on the host.
+      - /dev/disk:/dev/disk:ro  # Mounts the host's /dev/disk directory as read-only to the container. This allows cAdvisor to access disk-related information and metrics, such as disk usage and performance.
     networks:
       - monitoring
 
@@ -81,9 +82,9 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env.monitoring}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana # Mounts a volume named grafana_data to the container's /var/lib/grafana directory. This volume is used to persist Grafana's data, such as dashboards and plugins.
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro # Mounts the provisioning configuration files from the host to the container's /etc/grafana/provisioning directory. This allows Grafana to automatically configure datasources, dashboards, and other settings based on the provided configuration files. The files are mounted as read-only (ro) to ensure that Grafana cannot modify them while it is running.
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro # Mounts the dashboards directory from the host to the container's /var/lib/grafana/dashboards directory. This allows Grafana to load and display custom dashboards that are defined in the host's dashboards directory. The files are mounted as read-only (ro) to ensure that Grafana cannot modify them while it is running.
     ports:
       - "3000:3000"
     depends_on:
@@ -92,15 +93,17 @@ services:
     networks:
       - monitoring
 
-volumes:
-  prometheus_data:
-  loki_data:
-  alloy_data:
-  grafana_data:
+volumes:  # Defines named volumes that can be used by the services in the Docker Compose file. Named volumes are managed by Docker and can be used to persist data across container restarts and removals. Each volume is given a name, which can be referenced by the services that need to use it.
+  prometheus_data:  # This volume is used to persist Prometheus' time series database (TSDB) data. It allows Prometheus to retain its scraped metrics and time series data even if the container is restarted or removed. The volume is mounted to the Prometheus container's /prometheus directory, which is where Prometheus stores its TSDB data.
+  loki_data:  # This volume is used to persist Loki's log data. It allows Loki to retain its logs and other data even if the container is restarted or removed. The volume is mounted to the Loki container's /loki directory, which is where Loki stores its log data.
+  alloy_data:  # This volume is used to persist Alloy's data. It allows Alloy to retain its configuration and other data even if the container is restarted or removed. The volume is mounted to the Alloy container's /alloy directory, which is where Alloy stores its data.
+  grafana_data:  # This volume is used to persist Grafana's data, such as dashboards and plugins. It allows Grafana to retain its configuration and other data even if the container is restarted or removed. The volume is mounted to the Grafana container's /var/lib/grafana directory, which is where Grafana stores its data.
+# node-exporter and cadvisor don't need a named volume. Because they don't store any data that needs to survive a restart
+# they read live metrics from the host/kernel on demand and expose them over HTTP. Nothing is written to disk that anyone cares about.
 
 networks:
-  monitoring:
+  monitoring: # This network is used to connect the containers in the monitoring stack. It allows the containers to communicate with each other and with the host.
     driver: bridge
-  observability:
+  observability:  
     external: true
-    name: incident-observability
+    name: incident-observability  # prometheus (service from current compose file) and backend (service from another compose file) are on the same network so prometheus can scrape metrics from backend
