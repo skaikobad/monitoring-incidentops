@@ -50,10 +50,10 @@ services:
       retries: 3
       start_period: 15s
     logging:
-      driver: json-file
+      driver: json-file # for the backend service, the logging driver is set to json-file, which means that logs will be written in JSON format to a file on the host machine. This allows for structured logging and easier parsing of log data.
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "10m" # maximum size of the log file before it is rotated. In this case, the log file will be rotated when it reaches 10 megabytes in size.
+        max-file: "3" # maximum number of log files to keep. In this case, Docker will keep up to 3 rotated log files in addition to the current log file. When the maximum number of log files is reached, the oldest log file will be deleted to make room for new logs.
 
   frontend:
     build:
@@ -74,17 +74,17 @@ services:
       retries: 3
       start_period: 10s
     logging:
-      driver: json-file
+      driver: json-file 
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "10m" 
+        max-file: "3" 
 
 volumes:
   postgres_data:
 
 networks:
-  app_internal:
+  app_internal: # internal network for the app so that the db, backend, and frontend services can communicate with each other without exposing them to the outside world.
     driver: bridge
   observability:
     external: true
-    name: incident-observability
+    name: incident-observability  # backend (service from another app compose file) and prometheus (service from monitoring compose file) are on the same network so prometheus can scrape metrics from backend
