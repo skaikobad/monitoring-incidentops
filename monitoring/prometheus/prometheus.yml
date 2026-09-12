@@ -1,30 +1,30 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 15s  # The scrape_interval defines how often Prometheus will scrape metrics from the configured targets. In this case Prometheus will collect metrics from the targets every 15 seconds.
+  evaluation_interval: 15s  # The evaluation_interval defines how often Prometheus will evaluate rules. In this case, it is set to 15 seconds, meaning that Prometheus will evaluate rules every 15 seconds.
 
 scrape_configs:
   - job_name: prometheus
     static_configs:
-      - targets: ["prometheus:9090"]
+      - targets: ["prometheus:9090"] # Prometheus's own metrics are scraped from the Prometheus instance running on port 9090.
 
   - job_name: incident-backend
     metrics_path: /metrics
     static_configs:
-      - targets: ["backend:5000"]
+      - targets: ["backend:5000"] # Your Node.js app's custom metrics are scraped from the backend running on port 5000.
         labels:
           application: incident-management
           environment: lab
 
   - job_name: node-exporter
     static_configs:
-      - targets: ["node-exporter:9100"]
+      - targets: ["node-exporter:9100"] # Host OS metrics are scraped from the node-exporter running on port 9100.
         labels:
           application: incident-management
           environment: lab
 
   - job_name: cadvisor
     static_configs:
-      - targets: ["cadvisor:8080"]
+      - targets: ["cadvisor:8080"]  # Per-container metrics are scraped from the cAdvisor running on port 8080.
         labels:
           application: incident-management
           environment: lab
