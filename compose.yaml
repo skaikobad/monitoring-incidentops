@@ -87,4 +87,4 @@ networks:
     driver: bridge
   observability:
     external: true
-    name: incident-observability  # backend (service from another app compose file) and prometheus (service from monitoring compose file) are on the same network so prometheus can scrape metrics from backend
+    name: incident-observability  # backend (service from current/app compose file) and prometheus (service from monitoring compose file) are on the same network so prometheus can scrape metrics from backend
