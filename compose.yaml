@@ -23,6 +23,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  # Note: The db service doesn't expose a port, because nothing outside the app_internal network needs to talk to the database — and exposing it would be a security risk with zero benefit.
+  # Without ports: the container is still reachable from other containers on the same Docker network — just not from the host or the outside world.
+  # The db service is only reachable from other containers on the app_internal network, which is a private network that only the incident-app stack knows about.
 
   backend:
     build:
@@ -30,10 +33,10 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      NODE_ENV: production
-      PORT: 5000
-      DB_HOST: db
-      DB_PORT: 5432
+      NODE_ENV: production  # The backend service is running in production mode, which means it's optimized for performance and doesn't include development tools like webpack.
+      PORT: 5000  # The backend service listens on port 5000 for incoming HTTP requests. This is the port that the frontend service will use to communicate with the backend.
+      DB_HOST: db # The backend service connects to the db service using the hostname db, which is the name of the db service in this Docker Compose file. Docker Compose automatically creates a DNS entry for each service, so other services can reach it by its name.
+      DB_PORT: 5432 # The backend service connects to the db service on port 5432, which is the default port for PostgreSQL. This is the port that the db service is listening on inside its container.
       DB_NAME: ${POSTGRES_DB:-incidentdb}
       DB_USER: ${POSTGRES_USER:-incident_user}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
@@ -64,7 +67,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "80:80"
+      - "80:80" # maps port 80 on the host machine to port 80 on the container
     networks:
       - app_internal
     healthcheck:
@@ -80,7 +83,7 @@ services:
         max-file: "3" 
 
 volumes:
-  postgres_data:
+  postgres_data:  # volume for storing the PostgreSQL database data
 
 networks:
   app_internal: # internal network for the app so that the db, backend, and frontend services can communicate with each other without exposing them to the outside world.
