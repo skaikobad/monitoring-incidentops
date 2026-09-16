@@ -21,7 +21,7 @@ services:
     image: grafana/loki:3.7.6
     restart: unless-stopped
     command: 
-      -config.file=/etc/loki/loki-config.yml  # Specifies the path to the Loki configuration file inside the container. Loki will read this file to determine how to handle log entries and where to store them.
+      - config.file=/etc/loki/loki-config.yml  # Specifies the path to the Loki configuration file inside the container. Loki will read this file to determine how to handle log entries and where to store them.
     volumes:
       - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro # Mounts the Loki configuration file from the host machine to the container. The file is mounted as read-only (ro) to ensure that Loki cannot modify the configuration file while it is running.
       - loki_data:/loki # Mounts a named volume from the host machine to the container. This volume is used to persist Loki's log data, allowing it to survive container restarts and removals. The volume is mounted at the /loki directory inside the container.
@@ -37,7 +37,7 @@ services:
       - run # Starts the Alloy service in run mode, which is the default mode for running the application. This command is passed to the Alloy container as an argument.
       - --server.http.listen-addr=0.0.0.0:12345 # Without it alloy's built-in UI and HTTP API on port 12345 won't be reachable from outside the container. You'd lose the ability to inspect Alloy's status page and debug its pipeline from your browser.
       - --storage.path=/var/lib/alloy/data  # Specifies the directory where Alloy will store its data. This is where all the logs and other data managed by Alloy will be persisted. The directory is mounted as a volume from the host machine, allowing the data to be stored persistently even if the container is restarted or removed. The directory is mounted at the /var/lib/alloy/data path inside the container.
-      #- --config.file=/etc/alloy/config.alloy # Specifies the path to the Alloy configuration file inside the container. Alloy will read this file to determine how to handle log entries and where to store them. The configuration file is mounted as a volume from the host machine, allowing it to be updated or modified without having to rebuild the container.
+      - /etc/alloy/config.alloy
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro # Mounts the Alloy configuration file from the host machine to the container. The file is mounted at the /etc/alloy/config.alloy path inside the container and is read-only, meaning that it cannot be modified by the container.
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Mounts the Docker socket from the host machine to the container. This allows Alloy to communicate with the Docker daemon on the host, enabling it to gather logs and metrics from other containers running on the same host. The socket is mounted as read-only (ro) to ensure that Alloy cannot modify or interfere with the Docker daemon.
