@@ -21,7 +21,7 @@ services:
     image: grafana/loki:3.7.6
     restart: unless-stopped
     command: 
-      - config.file=/etc/loki/loki-config.yml  # Specifies the path to the Loki configuration file inside the container. Loki will read this file to determine how to handle log entries and where to store them.
+      - --config.file=/etc/loki/loki-config.yml  # Specifies the path to the Loki configuration file inside the container. Loki will read this file to determine how to handle log entries and where to store them.
     volumes:
       - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro # Mounts the Loki configuration file from the host machine to the container. The file is mounted as read-only (ro) to ensure that Loki cannot modify the configuration file while it is running.
       - loki_data:/loki # Mounts a named volume from the host machine to the container. This volume is used to persist Loki's log data, allowing it to survive container restarts and removals. The volume is mounted at the /loki directory inside the container.
